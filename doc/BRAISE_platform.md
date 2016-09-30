@@ -69,14 +69,14 @@ l’aide de 2 plateformes :
 * 1 carte nommée « slave » équipée d’1 Arduino M0 pro, d’un module Lora, d’un GPS
 et du capteur environemental.
 Les programmes à utiliser sont : 
-* **Gps_bme_simple** pour la carte « slave » (Acquisition capteurs, json,
+* **gps_bme_send** pour la carte « slave » (Acquisition capteurs, json,
 transmission)
-* **Gps_bme_master_simple** pour la carte « master » (Récupère les info gps et bme au
+* **gps_bme_receive** pour la carte « master » (Récupère les info gps et bme au
 format json et les décode)
 Ou
-* **gps_bme_simple_ack** pour la carte « slave » (Acquisition capteurs, json,
+* **gps_bme_send_ack** pour la carte « slave » (Acquisition capteurs, json,
 transmission avec acknowledge)
-* **gps_bme_master_simple_ack** pour la carte « master » (Récupère les info gps et bme
+* **gps_bme_receive_ack** pour la carte « master » (Récupère les info gps et bme
 au format json et les décode avec acknowledge)
 
 
