@@ -1,4 +1,17 @@
-﻿# gps_bme
+﻿# Pre-requisites
+
+```
+# Install third-party libraries
+mkdir -p $HOME/Arduino
+cd $HOME/Arduino
+ln -s $HOME/src/braise/libraries
+# Install logging library
+cd libraries
+git clone https://github.com/fjammes/ArduinoLogging
+git checkout arduini-m0-pro
+```
+
+# gps_bme
 
 ## gps_bme_receive
 Récupère les info gps et bme au format json et les décode

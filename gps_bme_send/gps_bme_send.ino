@@ -3,18 +3,20 @@
 * Fonctionne aléatoirement pour l'acquisition de la date, le reste est OK
 * -------------------------------------------------------------------------------------------*/
 
-#include <TinyGPS++.h>
-#include <SoftwareSerial.h>
-//#include "Wire.h"
-//#include "SPI.h"
-#include <Wire.h>
-#include <ArduinoJson.h>
-//#include <arduinoUtils.h>
-//#include "arduinoLoRa.h"
-#include <SPI.h>
+// Standards libraries
 #include <stdint.h>
+
+// Third-party libraries
+#include <ArduinoJson.h>
+#include <Logging.h>
+#include <SoftwareSerial.h>
 #include "SparkFunBME280.h"
+#include <SPI.h>
 #include "SX1272.h"
+#include <TinyGPS++.h>
+#include <Wire.h>
+
+#define LOGLEVEL LOG_LEVEL_TRACE
 
 static const int RXPin = 13, TXPin = 12;
 static const uint32_t GPSBaud = 9600;
@@ -34,38 +36,42 @@ SoftwareSerial ss(RXPin, TXPin);
 
 void setup()
 {
-    Serial.begin(9600);
+    int baud_rate = 9600; 
+    Log.Init(LOGLEVEL, baud_rate);
     ss.begin(GPSBaud);
-    Serial.println("Start setup()");
-
-    Serial.println(F("-- SX1272 module and Arduino: send packets without ACK  --"));
+    
+    Log.Trace("Start setup()"CR);
+    Log.Info("-- SX1272 module and Arduino: send packets without ACK  --"CR);
+    
     e = sx1272.ON();
-    Serial.print(F("Setting power ON: state "));
-    Serial.println(e, DEC);
+    Log.Trace("Set power ON: state %d"CR, e);
+    
     e |= sx1272.setMode(4);
-    Serial.print(F("Setting Mode: state "));
-    Serial.println(e, DEC);
+    Log.Trace("Set Mode: state %d"CR, e);
+    
     e |= sx1272.setHeaderON();
-    Serial.print(F("Setting Header ON: state "));
-    Serial.println(e, DEC);
+    Log.Trace("Set Header ON: state %d"CR, e);
+    
     e |= sx1272.setChannel(CH_10_868);
-    Serial.print(F("Setting Channel: state "));
-    Serial.println(e, DEC);
+    Log.Trace("Set Channel: state %d"CR, e);
+    
     e |= sx1272.setCRC_ON();
-    Serial.print(F("Setting CRC ON: state "));
-    Serial.println(e, DEC);
+    Log.Trace("Set CRC ON: state %d"CR, e);
+    
     e |= sx1272.setPower('H');
-    Serial.print(F("Setting Power: state "));
-    Serial.println(e, DEC);
-    e |= sx1272.setNodeAddress(3);
-    Serial.print(F("Setting node address: state "));
-    Serial.println(e, DEC);
-    if (e == 0)
-        Serial.println(F("SX1272 successfully configured"));
-    else
-        Serial.println(F("SX1272 initialization failed"));
+    Log.Trace("Setting Power: state %d"CR, e);
 
-    Serial.println();
+    e |= sx1272.setNodeAddress(3);
+    Log.Trace("Set node address: state %d"CR, e);
+    
+    if (e == 0)
+    {
+        Log.Info("SX1272 successfully configured"CR);
+    }
+    else
+    {
+        Log.Error("SX1272 initialization failed"CR);
+    }
 
     mySensor.settings.commInterface = I2C_MODE;
     mySensor.settings.I2CAddress = 0x76;
