@@ -36,8 +36,8 @@ void setup()
 {
   Serial.begin(9600);
   ss.begin(GPSBaud);
-  Serial.println("Demarrage..."); 
- 
+  Serial.println("Start setup()");
+
    Serial.println(F("SX1272 module and Arduino: send packets without ACK"));
   e = sx1272.ON();
   Serial.print(F("Setting power ON: state "));
@@ -66,7 +66,7 @@ void setup()
     Serial.println(F("SX1272 initialization failed"));
 
   Serial.println();
-  
+
    mySensor.settings.commInterface = I2C_MODE;
   mySensor.settings.I2CAddress = 0x76;
   mySensor.settings.runMode = 1;
@@ -76,10 +76,12 @@ void setup()
   mySensor.settings.pressOverSample = 1;
   mySensor.settings.humidOverSample = 1;
 
+
+        Serial.println(F("Set up BME"));
 	delay(10);  //Make sure sensor had enough time to turn on. BME280 requires 2ms to start up.
 	Serial.println(mySensor.begin(), HEX);
-        Serial.println("En attente d'ordre...");
-  
+        Serial.println(F("Finish setup()"));
+
 }
 
 void loop()
@@ -89,17 +91,17 @@ void loop()
   {
     if (gps.encode(ss.read()))
      {
-      mesureBME280(); 
+      mesureBME280();
       displayInfo();
       getInfogps();
       encodage_json();
       transmission_json();
       delay(3000);
-     } 
-  } 
+     }
+  }
   if (millis() > 5000 && gps.charsProcessed() < 10)
   {
-    Serial.println(F("No GPS detected: check wiring."));
+    Serial.println(F("FATAL: No GPS detected: check wiring."));
     while(true);
   }
 
@@ -110,14 +112,14 @@ void mesureBME280()
 {
  uint8_t valeur_reg_ctrl_meas;
 
-  
+
         valeur_reg_ctrl_meas = mySensor.readRegister(0xF4);                  //sauvegarde de la valeur du registre ctrl_meas
         delay(5);
         valeur_reg_ctrl_meas = valeur_reg_ctrl_meas | 0x01;                  //masque pour passer de sleep mode à forced mode
         delay(5);
         mySensor.writeRegister(BME280_CTRL_MEAS_REG, valeur_reg_ctrl_meas);  //ecriture de la nouvelle valeur dans le registre ctrl_meas
         delay(5);
-  
+
         temp_bme=mySensor.readTempC();
         delay(10);
         press_bme=mySensor.readFloatPressure();
@@ -129,11 +131,11 @@ void mesureBME280()
          Serial.println(press_bme,2);
          Serial.print("humidite: ");
          Serial.println(hum_bme,2);
-}  
+}
 
 void displayInfo()
 {
-  Serial.print(F("Location: ")); 
+  Serial.print(F("Location: "));
   if (gps.location.isValid())
   {
     Serial.print(gps.location.lat(), 6);
@@ -191,12 +193,13 @@ void getInfogps()
      annee_gps = gps.date.year();
      heure_gps = gps.time.hour();
      minute_gps = gps.time.minute();
-     seconde_gps = gps.time.second();  
+     seconde_gps = gps.time.second();
 
-} 
+}
 
 void encodage_json()
 {
+  Serial.println(F("Start encodage_json()"));
 StaticJsonBuffer<256> jsonBuffer;
 
 //constructon des objets
@@ -219,15 +222,16 @@ data["minute"] = gps.time.minute();//minute_gps;
 data["seconde"] = gps.time.second();//seconde_gps;
 
 //char data_json[256];
-data.printTo(data_json, sizeof(data_json));  
+data.printTo(data_json, sizeof(data_json));
 //Serial.println(data_json);
 }
 
 void transmission_json()
 {
+  Serial.println("Start transmission data_json()");
        e = sx1272.sendPacketTimeout(0, data_json);
-       Serial.println("transmission data_json");
+
        Serial.print(F("Packet sent, state "));
        Serial.println(e, DEC);
-  
+
 }

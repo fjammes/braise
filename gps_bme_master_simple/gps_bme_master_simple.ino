@@ -13,11 +13,11 @@ float temp_bme, press_bme, hum_bme;
 float longitude_gps, latitude_gps;
 int annee_gps, mois_gps, jour_gps, heure_gps, minute_gps, seconde_gps;
 
-void setup() 
+void setup()
 {
   Serial.begin(9600);
- 
-   Serial.println(F("SX1272 module and Arduino: send packets without ACK"));
+
+   Serial.println(F("SX1272 module and Arduino: receive packets without ACK"));
   e = sx1272.ON();
   Serial.print(F("Setting power ON: state "));
   Serial.println(e, DEC);
@@ -42,14 +42,14 @@ void setup()
   if (e == 0)
     Serial.println(F("SX1272 successfully configured"));
   else
-    Serial.println(F("SX1272 initialization failed")); 
-  
+    Serial.println(F("SX1272 initialization failed"));
+
 
 }
 
 void loop()
 {
-  
+
     e = sx1272.receivePacketTimeout(10000);
   if ( e == 0 )
   {
@@ -58,10 +58,10 @@ void loop()
     for (unsigned int i = 0; i < sx1272.packet_received.length; i++)
     {
       donnees_recues[i] = (char)sx1272.packet_received.data[i];
-    }    
+    }
 
   }
-  
+
 StaticJsonBuffer<256> donnees_recues_decodage;
 
 //deserialisation
@@ -72,7 +72,7 @@ if (!donnees_decod.success())
 {
   Serial.println("parseObject() failed");
   return;
-}    
+}
 
 char data_json[256];
 donnees_decod.printTo(data_json, sizeof(data_json));
@@ -80,8 +80,8 @@ Serial.println(data_json);
 
 
 //récuperation des données
-       //latitude_gps      = donnees_decod["latitude"]; 
-       //longitude_gps     = donnees_decod["longitude"]; 
+       //latitude_gps      = donnees_decod["latitude"];
+       //longitude_gps     = donnees_decod["longitude"];
        annee_gps         = donnees_decod["annee"];
        mois_gps          = donnees_decod["mois"];
        jour_gps          = donnees_decod["jour"];
@@ -91,17 +91,17 @@ Serial.println(data_json);
        latitude_gps      = donnees_decod["position"][0];
        longitude_gps     = donnees_decod["position"][1];
        temp_bme          = donnees_decod["bme"][0];
-       press_bme         = donnees_decod["bme"][1];      
+       press_bme         = donnees_decod["bme"][1];
        hum_bme           = donnees_decod["bme"][2];
 
-affichage();  
+affichage();
 
 //delay(10000);
 }
 
-void affichage(void) 
+void affichage(void)
 {
-Serial.print("******* ");  
+Serial.print("******* ");
 Serial.print(annee_gps);
 Serial.print("/");
 Serial.print(mois_gps);
@@ -113,8 +113,8 @@ Serial.print("/");
 Serial.print(minute_gps);
 Serial.print("/");
 Serial.print(seconde_gps);
-Serial.println(" *******");  
-  
+Serial.println(" *******");
+
 Serial.println("------- Position -------");
 Serial.print(latitude_gps,6);
 Serial.print("/");
