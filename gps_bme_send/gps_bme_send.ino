@@ -8,15 +8,13 @@
 
 // Third-party libraries
 #include <ArduinoJson.h>
-#include <Logging.h>
+#include <Log.h>
 #include <SoftwareSerial.h>
 #include "SparkFunBME280.h"
 #include <SPI.h>
 #include "SX1272.h"
 #include <TinyGPS++.h>
 #include <Wire.h>
-
-#define LOGLEVEL LOG_LEVEL_TRACE
 
 static const int RXPin = 13, TXPin = 12;
 static const uint32_t GPSBaud = 9600;
@@ -36,41 +34,43 @@ SoftwareSerial ss(RXPin, TXPin);
 
 void setup()
 {
-    int baud_rate = 9600; 
-    Log.Init(LOGLEVEL, baud_rate);
+    int baud_rate = 9600;
+    LOG_INIT(Log::TRACE, baud_rate);
+
+
     ss.begin(GPSBaud);
-    
-    Log.Trace("Start setup()"CR);
-    Log.Info("-- SX1272 module and Arduino: send packets without ACK  --"CR);
-    
+
+    LOG_TRACE("Start setup()");
+    LOG_INFO("-- SX1272 module and Arduino: send packets without ACK  --");
+
     e = sx1272.ON();
-    Log.Trace("Set power ON: state %d"CR, e);
-    
+    LOG_TRACE("Set power ON: state %d", e);
+
     e |= sx1272.setMode(4);
-    Log.Trace("Set Mode: state %d"CR, e);
-    
+    LOG_TRACE("Set Mode: state %d", e);
+
     e |= sx1272.setHeaderON();
-    Log.Trace("Set Header ON: state %d"CR, e);
-    
+    LOG_TRACE("Set Header ON: state %d", e);
+
     e |= sx1272.setChannel(CH_10_868);
-    Log.Trace("Set Channel: state %d"CR, e);
-    
+    LOG_TRACE("Set Channel: state %d", e);
+
     e |= sx1272.setCRC_ON();
-    Log.Trace("Set CRC ON: state %d"CR, e);
-    
+    LOG_TRACE("Set CRC ON: state %d", e);
+
     e |= sx1272.setPower('H');
-    Log.Trace("Setting Power: state %d"CR, e);
+    LOG_TRACE("Setting Power: state %d", e);
 
     e |= sx1272.setNodeAddress(3);
-    Log.Trace("Set node address: state %d"CR, e);
-    
+    LOG_TRACE("Set node address: state %d", e);
+
     if (e == 0)
     {
-        Log.Info("SX1272 successfully configured"CR);
+        LOG_INFO("SX1272 successfully configured");
     }
     else
     {
-        Log.Error("SX1272 initialization failed"CR);
+        LOG_ERROR("SX1272 initialization failed");
     }
 
     mySensor.settings.commInterface = I2C_MODE;
@@ -83,10 +83,10 @@ void setup()
     mySensor.settings.humidOverSample = 1;
 
 
-    Serial.println(F("Set up BME"));
+    LOG_TRACE("Set up BME");
     delay(10);  //Make sure sensor had enough time to turn on. BME280 requires 2ms to start up.
     Serial.println(mySensor.begin(), HEX);
-    Serial.println(F("Finish setup()"));
+    LOG_TRACE("Finish setup()");
 
 }
 
@@ -107,7 +107,7 @@ void loop()
     }
     if (millis() > 5000 && gps.charsProcessed() < 10)
     {
-        Serial.println(F("FATAL: No GPS detected: check wiring."));
+        LOG_FATAL("FATAL: No GPS detected: check wiring.");
         while(true);
     }
 
@@ -131,63 +131,38 @@ void mesureBME280()
     press_bme=mySensor.readFloatPressure();
     delay(10);
     hum_bme=mySensor.readFloatHumidity();
-    Serial.print("temp: ");
-    Serial.println(temp_bme,2);
-    Serial.print("pression: ");
-    Serial.println(press_bme,2);
-    Serial.print("humidite: ");
-    Serial.println(hum_bme,2);
+    LOG_INFO("temperature: %f", temp_bme);
+    LOG_INFO("pressure: %f", press_bme);
+    LOG_INFO("humidity: %f", hum_bme);
 }
 
 void displayInfo()
 {
-    Serial.print(F("Location: "));
     if (gps.location.isValid())
     {
-        Serial.print(gps.location.lat(), 6);
-        Serial.print(F(","));
-        Serial.print(gps.location.lng(), 6);
+        LOG_INFO("Location %f,%f", gps.location.lat(), gps.location.lng());
     }
     else
     {
-        Serial.print(F("Location INVALID"));
+        LOG_WARN("Location INVALID");
     }
 
-    Serial.print(F("  Date/Time: "));
     if (gps.date.isValid())
     {
-        Serial.print(gps.date.month());
-        Serial.print(F("/"));
-        Serial.print(gps.date.day());
-        Serial.print(F("/"));
-        Serial.print(gps.date.year());
+        LOG_INFO("Date (MM/DD/YYYY): %d/%d/%d", gps.date.month(), gps.date.day(), gps.date.year());
     }
-    else
-    {
-        Serial.print(F("Date INVALID"));
-    }
+    else LOG_WARN("Date from GPS INVALID");
 
-    Serial.print(F(" "));
     if (gps.time.isValid())
     {
-        if (gps.time.hour() < 10) Serial.print(F("0"));
-        Serial.print(gps.time.hour());
-        Serial.print(F(":"));
-        if (gps.time.minute() < 10) Serial.print(F("0"));
-        Serial.print(gps.time.minute());
-        Serial.print(F(":"));
-        if (gps.time.second() < 10) Serial.print(F("0"));
-        Serial.print(gps.time.second());
+        char time[8];
+        sprintf(time, "%02d:%02d:%02d", gps.time.hour(), gps.time.minute(), gps.time.second());
+        LOG_INFO("Time: %s", time);
         //Serial.print(F("."));
         //if (gps.time.centisecond() < 10) Serial.print(F("0"));
         //Serial.print(gps.time.centisecond());
     }
-    else
-    {
-        Serial.print(F("Time INVALID"));
-    }
-
-    Serial.println();
+    else LOG_WARN("Time INVALID");
 }
 
 void getInfogps()
@@ -205,7 +180,7 @@ void getInfogps()
 
 void encodage_json()
 {
-    Serial.println(F("Start encodage_json()"));
+    LOG_DEBUG("Start encodage_json()");
     StaticJsonBuffer<256> jsonBuffer;
 
 //constructon des objets
@@ -234,10 +209,8 @@ void encodage_json()
 
 void transmission_json()
 {
-    Serial.println("Start transmission data_json()");
+    LOG_DEBUG("Start transmission_json()");
     e = sx1272.sendPacketTimeout(0, data_json);
 
-    Serial.print(F("Packet sent, state "));
-    Serial.println(e, DEC);
-
+    LOG_INFO("Packet sent, state: %d", e);
 }
