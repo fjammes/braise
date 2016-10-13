@@ -131,9 +131,9 @@ void mesureBME280()
     press_bme=mySensor.readFloatPressure();
     delay(10);
     hum_bme=mySensor.readFloatHumidity();
-    LOG_INFO("temperature: %f", temp_bme);
-    LOG_INFO("pressure: %f", press_bme);
-    LOG_INFO("humidity: %f", hum_bme);
+    LOG_INFO("temperature: %f °C", temp_bme);
+    LOG_INFO("pressure: %f Pa", press_bme);
+    LOG_INFO("humidity: %f %", hum_bme);
 }
 
 void displayInfo()
