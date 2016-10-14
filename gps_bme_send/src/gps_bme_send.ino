@@ -24,9 +24,9 @@ char data_json[256];
 float temp_bme, press_bme, hum_bme;
 float longitude_gps, latitude_gps;
 int annee_gps, mois_gps, jour_gps, heure_gps, minute_gps, seconde_gps;
-int e;
 
-BME280 mySensor;
+
+BME280 sensor_BME280;
 
 TinyGPSPlus gps;
 
@@ -41,51 +41,23 @@ void setup()
     ss.begin(GPSBaud);
 
     LOG_TRACE("Start setup()");
-    LOG_INFO("-- SX1272 module and Arduino: send packets without ACK  --");
+    LOG_INFO("** SX1272 module and Arduino: send packets without ACK  **");
 
-    e = sx1272.ON();
-    LOG_TRACE("Set power ON: state %d", e);
+    setupSX1272();
 
-    e |= sx1272.setMode(4);
-    LOG_TRACE("Set Mode: state %d", e);
-
-    e |= sx1272.setHeaderON();
-    LOG_TRACE("Set Header ON: state %d", e);
-
-    e |= sx1272.setChannel(CH_10_868);
-    LOG_TRACE("Set Channel: state %d", e);
-
-    e |= sx1272.setCRC_ON();
-    LOG_TRACE("Set CRC ON: state %d", e);
-
-    e |= sx1272.setPower('H');
-    LOG_TRACE("Setting Power: state %d", e);
-
-    e |= sx1272.setNodeAddress(3);
-    LOG_TRACE("Set node address: state %d", e);
-
-    if (e == 0)
-    {
-        LOG_INFO("SX1272 successfully configured");
-    }
-    else
-    {
-        LOG_ERROR("SX1272 initialization failed");
-    }
-
-    mySensor.settings.commInterface = I2C_MODE;
-    mySensor.settings.I2CAddress = 0x76;
-    mySensor.settings.runMode = 1;
-    mySensor.settings.tStandby = 0;
-    mySensor.settings.filter = 0;
-    mySensor.settings.tempOverSample = 1;
-    mySensor.settings.pressOverSample = 1;
-    mySensor.settings.humidOverSample = 1;
+    sensor_BME280.settings.commInterface = I2C_MODE;
+    sensor_BME280.settings.I2CAddress = 0x76;
+    sensor_BME280.settings.runMode = 1;
+    sensor_BME280.settings.tStandby = 0;
+    sensor_BME280.settings.filter = 0;
+    sensor_BME280.settings.tempOverSample = 1;
+    sensor_BME280.settings.pressOverSample = 1;
+    sensor_BME280.settings.humidOverSample = 1;
 
 
     LOG_TRACE("Set up BME");
     delay(10);  //Make sure sensor had enough time to turn on. BME280 requires 2ms to start up.
-    Serial.println(mySensor.begin(), HEX);
+    Serial.println(sensor_BME280.begin(), HEX);
     LOG_TRACE("Finish setup()");
 
 }
@@ -114,23 +86,56 @@ void loop()
 
 }
 
+/**
+ * Setup Lora hardware
+ */
+void setupSX1272() {
+    int e;
+    e = sx1272.ON();
+    LOG_TRACE("Set power ON: state %d", e);
+
+    e |= sx1272.setMode(4);
+    LOG_TRACE("Set Mode: state %d", e);
+
+    e |= sx1272.setHeaderON();
+    LOG_TRACE("Set Header ON: state %d", e);
+
+    e |= sx1272.setChannel(CH_10_868);
+    LOG_TRACE("Set Channel: state %d", e);
+
+    e |= sx1272.setCRC_ON();
+    LOG_TRACE("Set CRC ON: state %d", e);
+
+    e |= sx1272.setPower('H');
+    LOG_TRACE("Setting Power: state %d", e);
+
+    e |= sx1272.setNodeAddress(3);
+    LOG_TRACE("Set node address: state %d", e);
+
+    if (e == 0) {
+        LOG_INFO("SX1272 successfully configured");
+    } else {
+        LOG_ERROR("SX1272 initialization failed");
+    }
+}
+
 void mesureBME280()
 {
     uint8_t valeur_reg_ctrl_meas;
 
 
-    valeur_reg_ctrl_meas = mySensor.readRegister(0xF4);                  //sauvegarde de la valeur du registre ctrl_meas
+    valeur_reg_ctrl_meas = sensor_BME280.readRegister(0xF4);                  //sauvegarde de la valeur du registre ctrl_meas
     delay(5);
     valeur_reg_ctrl_meas = valeur_reg_ctrl_meas | 0x01;                  //masque pour passer de sleep mode à forced mode
     delay(5);
-    mySensor.writeRegister(BME280_CTRL_MEAS_REG, valeur_reg_ctrl_meas);  //ecriture de la nouvelle valeur dans le registre ctrl_meas
+    sensor_BME280.writeRegister(BME280_CTRL_MEAS_REG, valeur_reg_ctrl_meas);  //ecriture de la nouvelle valeur dans le registre ctrl_meas
     delay(5);
 
-    temp_bme=mySensor.readTempC();
+    temp_bme=sensor_BME280.readTempC();
     delay(10);
-    press_bme=mySensor.readFloatPressure();
+    press_bme=sensor_BME280.readFloatPressure();
     delay(10);
-    hum_bme=mySensor.readFloatHumidity();
+    hum_bme=sensor_BME280.readFloatHumidity();
     LOG_INFO("temperature: %f °C", temp_bme);
     LOG_INFO("pressure: %f Pa", press_bme);
     LOG_INFO("humidity: %f %", hum_bme);
@@ -210,7 +215,7 @@ void encodage_json()
 void transmission_json()
 {
     LOG_DEBUG("Start transmission_json()");
-    e = sx1272.sendPacketTimeout(0, data_json);
+    int e = sx1272.sendPacketTimeout(0, data_json);
 
     LOG_INFO("Packet sent, state: %d", e);
 }
