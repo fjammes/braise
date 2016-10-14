@@ -1,5 +1,9 @@
 # Project management for software development
 
+Cost unit is 0.5 day for 1 FTE.
+
+## DONE
+
 | Action | State | Planned cost | Effective Cost | End date |
 |--------|-------|--------------|----------------|---------|
 |Learn Libelium | DONE | 6 || 20160715 |
@@ -10,7 +14,13 @@
 |Move BRAISE code to Github | DONE | 1 || 20160915|
 |Move ArduinoLogging to Libelium | DONE | 1 || 20160920|
 |Validate initial BRAISE code | DONE | 2 || 20160930|
-|Use logger inside BRAISE code| IN PROGRESS | 5 | 2||
+
+## TODO
+
+| Action | State | Planned cost | Effective Cost | End date | Comment |
+|--------|-------|--------------|----------------|---------|---------|
+| Use platformIO | WIP | 6 ||| https://github.com/platformio/platformio/issues/805 |
+|Use logger inside | WIP| 5 | 2||
 |Study Lorawan | TODO | 10 |||
 |Implement Lorawan POC| TODO | 10 |||
 |Move BRAISE code to integrated board| TODO | 10 |||
