@@ -30,66 +30,14 @@ BME280 sensor_BME280;
 
 TinyGPSPlus gps;
 
-SoftwareSerial ss(RXPin, TXPin);
+SoftwareSerial serialGPS(RXPin, TXPin);
 
-void setup()
-{
-    int baud_rate = 9600;
-    LOG_INIT(Log::TRACE, baud_rate);
-
-
-    ss.begin(GPSBaud);
-
-    LOG_TRACE("Start setup()");
-    LOG_INFO("** SX1272 module and Arduino: send packets without ACK  **");
-
-    setupSX1272();
-
-    sensor_BME280.settings.commInterface = I2C_MODE;
-    sensor_BME280.settings.I2CAddress = 0x76;
-    sensor_BME280.settings.runMode = 1;
-    sensor_BME280.settings.tStandby = 0;
-    sensor_BME280.settings.filter = 0;
-    sensor_BME280.settings.tempOverSample = 1;
-    sensor_BME280.settings.pressOverSample = 1;
-    sensor_BME280.settings.humidOverSample = 1;
-
-
-    LOG_TRACE("Set up BME");
-    delay(10);  //Make sure sensor had enough time to turn on. BME280 requires 2ms to start up.
-    Serial.println(sensor_BME280.begin(), HEX);
-    LOG_TRACE("Finish setup()");
-
-}
-
-void loop()
-{
-
-    while (ss.available() > 0)
-    {
-        if (gps.encode(ss.read()))
-        {
-            mesureBME280();
-            displayInfo();
-            getInfogps();
-            encodage_json();
-            transmission_json();
-            delay(3000);
-        }
-    }
-    if (millis() > 5000 && gps.charsProcessed() < 10)
-    {
-        LOG_FATAL("FATAL: No GPS detected: check wiring.");
-        while(true);
-    }
-
-
-}
 
 /**
  * Setup Lora hardware
  */
 void setupSX1272() {
+	LOG_DEBUG("Start setupSX1272()");
     int e;
     e = sx1272.ON();
     LOG_TRACE("Set power ON: state %d", e);
@@ -118,6 +66,62 @@ void setupSX1272() {
         LOG_ERROR("SX1272 initialization failed");
     }
 }
+
+void setup()
+{
+    int baud_rate = 9600;
+    LOG_INIT(Log::TRACE, baud_rate);
+
+
+    serialGPS.begin(GPSBaud);
+
+    LOG_TRACE("Start setup()");
+    LOG_INFO("** SX1272 module and Arduino: send packets without ACK  **");
+
+    setupSX1272();
+
+    sensor_BME280.settings.commInterface = I2C_MODE;
+    sensor_BME280.settings.I2CAddress = 0x76;
+    sensor_BME280.settings.runMode = 1;
+    sensor_BME280.settings.tStandby = 0;
+    sensor_BME280.settings.filter = 0;
+    sensor_BME280.settings.tempOverSample = 1;
+    sensor_BME280.settings.pressOverSample = 1;
+    sensor_BME280.settings.humidOverSample = 1;
+
+
+    LOG_TRACE("Set up BME280");
+    delay(10);  //Make sure sensor had enough time to turn on. BME280 requires 2ms to start up.
+    uint8_t hex_result = sensor_BME280.begin();
+    LOG_TRACE("BME.begin() returned: %x", hex_result);
+    LOG_TRACE("Finish setup()");
+
+}
+
+void loop()
+{
+
+    while (serialGPS.available() > 0)
+    {
+        if (gps.encode(serialGPS.read()))
+        {
+            mesureBME280();
+            displayInfo();
+            getInfogps();
+            encodage_json();
+            transmission_json();
+            delay(3000);
+        }
+    }
+    if (millis() > 5000 && gps.charsProcessed() < 10)
+    {
+        LOG_FATAL("FATAL: No GPS detected: check wiring.");
+        while(true);
+    }
+
+
+}
+
 
 void mesureBME280()
 {
@@ -180,7 +184,6 @@ void getInfogps()
     heure_gps = gps.time.hour();
     minute_gps = gps.time.minute();
     seconde_gps = gps.time.second();
-
 }
 
 void encodage_json()
@@ -197,8 +200,8 @@ void encodage_json()
     bmedata.add(hum_bme);
 
     JsonArray& latlon = data.createNestedArray("position");
-    latlon.add(gps.location.lat()/*latitude_gps*/, 6);  // 6 is the number of decimals to print
-    latlon.add(gps.location.lng()/*longitude_gps*/, 6);
+    latlon.add(gps.location.lat(), 6);  // 6 is the number of decimals to print
+    latlon.add(gps.location.lng(), 6);
 
     data["annee"] = gps.date.year();//annee_gps;
     data["mois"] = gps.date.month();//mois_gps;

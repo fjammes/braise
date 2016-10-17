@@ -29,6 +29,8 @@
 #include "SX1272.h"
 #include <SPI.h>
 
+#define Serial SerialUSB
+
 /*  CHANGE LOGS by C. Pham
  *
  *  Jan, 23rd, 2016

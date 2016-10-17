@@ -1,16 +1,12 @@
 // Standards libraries
 
 // Third-party libraries
-#include <arduinoUtils.h>
 #include <ArduinoJson.h>
 #include <Log.h>
 #include <SPI.h>
 #include "SX1272.h"
 #include <Wire.h>
 
-int e;
-
-char donnees_recues[256];
 char ordre_acqui [] = "ACQUI";
 
 float temp_bme, press_bme, hum_bme;
@@ -65,9 +61,11 @@ void setupSX1272() {
 
 void loop()
 {
+	int e;
+	char donnees_recues[256];
 
     e = sx1272.receivePacketTimeout(10000);
-    if ( e == 0 )
+    if (e==0)
     {
     	LOG_DEBUG("Receive packet, state %d", e);
         for (unsigned int i = 0; i < sx1272.packet_received.length; i++)
@@ -90,12 +88,10 @@ void loop()
 
     char data_json[256];
     donnees_decod.printTo(data_json, sizeof(data_json));
-    Serial.println(data_json);
+    LOG_DEBUG("json: %s", data_json);
 
 
 //récuperation des données
-    //latitude_gps      = donnees_decod["latitude"];
-    //longitude_gps     = donnees_decod["longitude"];
     annee_gps         = donnees_decod["annee"];
     mois_gps          = donnees_decod["mois"];
     jour_gps          = donnees_decod["jour"];
