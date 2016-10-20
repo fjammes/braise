@@ -100,7 +100,6 @@ void setup()
 
 void loop()
 {
-
     while (serialGPS.available() > 0)
     {
         if (gps.encode(serialGPS.read()))
@@ -118,8 +117,6 @@ void loop()
         LOG_FATAL("FATAL: No GPS detected: check wiring.");
         while(true);
     }
-
-
 }
 
 
