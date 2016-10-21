@@ -72,12 +72,10 @@ void setup()
     int baud_rate = 9600;
     LOG_INIT(Log::TRACE, baud_rate);
 
-
-    serialGPS.begin(GPSBaud);
-
     LOG_TRACE("Start setup()");
     LOG_INFO("** SX1272 module and Arduino: send packets without ACK  **");
 
+    serialGPS.begin(GPSBaud);
     setupSX1272();
 
     sensor_BME280.settings.commInterface = I2C_MODE;
