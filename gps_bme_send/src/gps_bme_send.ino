@@ -32,7 +32,6 @@ TinyGPSPlus gps;
 
 SoftwareSerial serialGPS(RXPin, TXPin);
 
-
 /**
  * Setup Lora hardware
  */
@@ -104,7 +103,6 @@ void loop()
         {
             mesureBME280();
             displayInfo();
-            getInfogps();
             encodage_json();
             transmission_json();
             delay(3000);
@@ -121,7 +119,6 @@ void loop()
 void mesureBME280()
 {
     uint8_t valeur_reg_ctrl_meas;
-
 
     valeur_reg_ctrl_meas = sensor_BME280.readRegister(0xF4);                  //sauvegarde de la valeur du registre ctrl_meas
     delay(5);
@@ -169,24 +166,12 @@ void displayInfo()
     else LOG_WARN("Time INVALID");
 }
 
-void getInfogps()
-{
-    latitude_gps = gps.location.lat();
-    longitude_gps = gps.location.lng();
-    mois_gps = gps.date.month();
-    jour_gps = gps.date.day();
-    annee_gps = gps.date.year();
-    heure_gps = gps.time.hour();
-    minute_gps = gps.time.minute();
-    seconde_gps = gps.time.second();
-}
-
 void encodage_json()
 {
     LOG_DEBUG("Start encodage_json()");
     StaticJsonBuffer<256> jsonBuffer;
 
-//constructon des objets
+    //constructon des objets
     JsonObject& data = jsonBuffer.createObject();
 
     JsonArray& bmedata = data.createNestedArray("bme");
@@ -205,9 +190,9 @@ void encodage_json()
     data["minute"] = gps.time.minute();//minute_gps;
     data["seconde"] = gps.time.second();//seconde_gps;
 
-//char data_json[256];
+    //char data_json[256];
     data.printTo(data_json, sizeof(data_json));
-//Serial.println(data_json);
+    //Serial.println(data_json);
 }
 
 void transmission_json()
