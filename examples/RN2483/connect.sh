@@ -30,7 +30,9 @@
 
 #Check if at least port and baud params provided
 if [ -z "$1" ] || [ -z "$2" ]; then
-    printf "\nusage: ./connect.sh <device> <port speed> [# Stop bits 1|2] [parity even|odd]\n\tNeed to provide at least port and baud speed parameters.\n\texample:connect.sh /dev/ttyS0 9600\n\n"
+    printf "\nusage: ./connect.sh <device> <port speed> [# Stop bits 1|2] [parity even|odd]\n"
+	printf "\tNeed to provide at least port and baud speed parameters.\n"
+	printf "\texample:connect.sh /dev/ttyACM0 57600\n\n"
     exit 1;
 else
     case "$3"   in

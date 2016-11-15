@@ -69,3 +69,16 @@ mac save
 ok^M
 ^C
 
+# Change channel availability
+
+mac set ch dcycle 0 9
+ok^M
+mac set ch dcycle 1 99
+ok^M
+mac set ch dcycle 2 999
+ok^M
+mac save
+ok^M
+mac join otaa
+no_free_ch^M
+
