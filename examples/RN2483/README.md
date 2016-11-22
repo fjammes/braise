@@ -2,6 +2,10 @@
 
 https://staging.thethingsnetwork.org/applications/70B3D57ED00015FC/devices/0004A30B001B9BA7
 
+# Basic command for OTAA join
+
+http://www.microchip.com/forums/m945840.aspx
+
 # Serial communication
 
 lora@clrinfopc04:~/src/braise/examples/RN2483$ ./connect.sh /dev/ttyACM0 57600

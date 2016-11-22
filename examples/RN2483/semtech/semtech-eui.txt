@@ -1,0 +1,6 @@
+                EUI	                        Status
+Application	    FA-9C-43-C0-DA-00-00-01		OK
+Motes           FA-9C-43-C0-DE-00-00-01		OK
+                FA-9C-43-C0-DE-00-00-02		OK
+                FA-9C-43-C0-DE-00-00-03		OK
+                FA-9C-43-C0-DE-00-00-04		OK
