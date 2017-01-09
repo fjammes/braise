@@ -1,29 +1,51 @@
 ﻿# Pre-requisites
 
+## Setup your system 
+
+* Add user to `dialout` group
+* Update udev rules 
 ```
-# Install third-party libraries
-mkdir -p $HOME/Arduino
-cd $HOME/Arduino
-ln -s $HOME/src/braise/libraries
-# Install logging library
-cd libraries
+# Required on Debian 8.6
+curl -O https://github.com/platformio/platformio/blob/develop/scripts/99-platformio-udev.rules
+sudo cp 99-platformio-udev.rules /etc/udev/rules.d/99-platformio-udev.rules
+# Add lines below to 99-platformio-udev.rules
+# ATTRS{idVendor}=="2a03", ATTRS{idProduct}=="[08][02]*", ENV{ID_MM_DEVICE_IGNORE}="1"
+# ATTRS{idVendor}=="2a03", ATTRS{idProduct}=="004F", ENV{ID_MM_DEVICE_IGNORE}="1"
+sudo service udev restart
+# Unplug and re-plug arduino board
+dmesg
+```
+
+## Install platformio
+
+```
+sudo pip install -U platformio
+```
+
+## Install logging library
+
+```
+mkdir -p src
+cd src
 git clone https://github.com/fjammes/ArduinoLogging
-git checkout arduini-m0-pro
 ```
 
-# gps_bme
+# Install BRAISE code
 
-## gps_bme_receive
-Récupère les info gps et bme au format json et les décode
+``` 
+git clone git@github.com:fjammes/braise.git
+# WARNING: ArduinoLogging is symlinked using hard-coded path
+```
+
+# Code architecture 
 
 ## gps_bme_send
-Acquisition capteur, json, transmission
 
-# gps_bme_ack
+Get gps and bme sensors informations, encode them in json and send them using
+lora.
 
-## gps_bme_receive_ack
-Reçoit les info gps et bme au format json et les décode, avec ack
 
-## gps_bme_send_ack
-Acquisition capteur, json, transmission avec ack
+## gps_bme_receive
+
+Retrieve json data using Lora, and print it to serial port.
 
