@@ -37,7 +37,6 @@
 #include <TinyGPS++.h>
 
 static const int RXPin = 13, TXPin = 12;
-static const uint32_t GPSBaud = 9600;
 
 char data_json[256];
 
@@ -45,11 +44,12 @@ float temp_bme, press_bme, hum_bme;
 float longitude_gps, latitude_gps;
 int annee_gps, mois_gps, jour_gps, heure_gps, minute_gps, seconde_gps;
 
-Adafruit_MCP23017 mcp;
 BME280 sensor_BME280;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
+	const uint32_t GPS_BAUDRATE = 9600;
+
 	// initialize digital pin LED_BUILTIN as an output.
 	pinMode(LED_BUILTIN, OUTPUT);
 	int baud_rate = 9600;
@@ -58,32 +58,17 @@ void setup() {
 	LOG_TRACE("Start setup()");
 	LOG_INFO("** SX1272 module and Arduino: send packets without ACK  **");
 
+	_setupExpander();
+
+	Serial1.begin(GPS_BAUDRATE);
+
 	//serialGPS.begin(GPSBaud);
 	//setupSX1272();
+	if (Serial1.available()) {
 
-	// Expander
-	LOG_TRACE("Set up Expander MCP23017");
-	mcp.begin(1);      // use default address 0
+	}
 
-//	for (int i = 0; i < 16; ++i) {
-//		mcp.pinMode(i, OUTPUT);
-//		LOG_TRACE("Use pullUp()");
-//		mcp.pullUp(i, HIGH);
-//	}
-
-
-	// Humidity move with finger but strangely and not with same value than
-	// with code above
-	int pinId = 10;
-	mcp.pinMode(pinId, OUTPUT);
-	mcp.pullUp(pinId, HIGH);
-
-	//LOG_TRACE("Use writeGPIOAB()");
-	//mcp.writeGPIOAB(0xFFFF);
-
-	delay(10);
-
-	// BME280
+	// Configure BME280
 	sensor_BME280.settings.commInterface = I2C_MODE;
 	sensor_BME280.settings.I2CAddress = 0x76;
 	sensor_BME280.settings.runMode = 1;
@@ -110,6 +95,35 @@ void loop() {
 	SerialUSB.println("Coucou 3");
 	readBME280();
 	delay(100);
+}
+
+void _setupExpander() {
+	// Enable GPS en BME280 using expander, switches, en reset
+	Adafruit_MCP23017 mcp;
+	LOG_TRACE("Set up Expander MCP23017");
+	mcp.begin(1);
+
+	const int GPS_PIN_ID = 9;
+	LOG_TRACE("Switch on GPS (GPB1)");
+	mcp.pinMode(GPS_PIN_ID, OUTPUT);
+	mcp.digitalWrite(GPS_PIN_ID, HIGH);
+
+	const int GPS_NRESET_PIN_ID = 15;
+	LOG_TRACE("Prevent GPS reset (GPB7)");
+	mcp.pinMode(GPS_NRESET_PIN_ID, OUTPUT);
+	mcp.digitalWrite(GPS_NRESET_PIN_ID, HIGH);
+
+	const int BME280_PIN_ID = 10;
+	LOG_TRACE("Switch on BME280 (GPB2)");
+	mcp.pinMode(BME280_PIN_ID, OUTPUT);
+	mcp.digitalWrite(BME280_PIN_ID, HIGH);
+
+	//LOG_TRACE("Use writeGPIOAB()");
+	//mcp.writeGPIOAB(0xFFFF);
+
+	const int POWER_VOLTAGE_STABILITY_TIME = 10;
+	delay(POWER_VOLTAGE_STABILITY_TIME);
+
 }
 
 void readBME280() {
