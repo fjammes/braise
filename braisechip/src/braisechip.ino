@@ -36,7 +36,11 @@
 #include "SX1272.h"
 #include <TinyGPS++.h>
 
-static const int RXPin = 13, TXPin = 12;
+// Serial for GPS
+#define PIN_SERIALGPS_RX       (9ul)
+#define PIN_SERIALGPS_TX       (8ul)
+#define PAD_SERIALGPS_RX       (SERCOM_RX_PAD_3)
+#define PAD_SERIALGPS_TX       (UART_TX_PAD_2)
 
 char data_json[256];
 
@@ -46,28 +50,75 @@ int annee_gps, mois_gps, jour_gps, heure_gps, minute_gps, seconde_gps;
 
 BME280 sensor_BME280;
 
+TinyGPSPlus gps;
+
+// See https://learn.adafruit.com/using-atsamd21-sercom-to-add-more-spi-i2c-serial-ports/creating-a-new-serial
+// Is conflicted with Serial1: see /home/lora/.platformio/packages/framework-arduinosam/variants/arduino_zero/variant.cpp
+// l. 213
+Uart SerialGps (&sercom0, PIN_SERIALGPS_RX, PIN_SERIALGPS_TX, PAD_SERIALGPS_RX, PAD_SERIALGPS_TX);
+
+void SERCOM0_Handler()
+{
+  SerialGps.IrqHandler();
+}
+
 // the setup function runs once when you press reset or power the board
 void setup() {
-	const uint32_t GPS_BAUDRATE = 9600;
+	const int GPS_BAUDRATE = 9600;
+	const int SERIAL_BAUDRATE = 9600;
 
 	// initialize digital pin LED_BUILTIN as an output.
 	pinMode(LED_BUILTIN, OUTPUT);
-	int baud_rate = 9600;
-	LOG_INIT(Log::TRACE, baud_rate);
+	LOG_INIT(Log::TRACE, SERIAL_BAUDRATE);
 
 	LOG_TRACE("Start setup()");
-	LOG_INFO("** SX1272 module and Arduino: send packets without ACK  **");
+	LOG_INFO("** SX1272 module and Arduino: send packets without ACK **");
 
 	_setupExpander();
+	//_setupBME280();
 
-	Serial1.begin(GPS_BAUDRATE);
+	SerialGps.begin(GPS_BAUDRATE);
 
-	//serialGPS.begin(GPSBaud);
 	//setupSX1272();
-	if (Serial1.available()) {
 
+	LOG_TRACE("Finish setup()");
+}
+
+// the loop function runs over and over again forever
+void loop() {
+
+	_switchLed();
+
+	//readBME280();
+
+	SerialUSB.println("Sent ATI to GPS");
+	SerialGps.print("ATI\r\n");
+	int read = SerialGps.read();
+	LOG_TRACE("GPS read: %i", read);
+	if (SerialGps.available() > 0)
+	{
+		LOG_TRACE("GPS available");
+		if (gps.encode(SerialGps.read()))
+		{
+			displayInfo();
+		}
+	}
+	if (millis() > 5000 && gps.charsProcessed() < 10)
+	{
+		LOG_FATAL("FATAL: No GPS detected: check wiring.");
+		while(true);
 	}
 
+	delay(3000);
+}
+
+void _switchLed() {
+	digitalWrite(LED_BUILTIN, HIGH); // turn the LED on (HIGH is the voltage level)
+	delay(500);
+	digitalWrite(LED_BUILTIN, LOW); // turn the LED off by making the voltage LOW
+}
+
+void _setupBME280() {
 	// Configure BME280
 	sensor_BME280.settings.commInterface = I2C_MODE;
 	sensor_BME280.settings.I2CAddress = 0x76;
@@ -82,19 +133,6 @@ void setup() {
 	//Make sure sensor had enough time to turn on. BME280 requires 2ms to start up.
 	uint8_t hex_result = sensor_BME280.begin();
 	LOG_TRACE("BME.begin() returned: %x", hex_result);
-	LOG_TRACE("Finish setup()");
-}
-
-// the loop function runs over and over again forever
-void loop() {
-	digitalWrite(LED_BUILTIN, HIGH); // turn the LED on (HIGH is the voltage level)
-	delay(500);
-	digitalWrite(LED_BUILTIN, LOW); // turn the LED off by making the voltage LOW
-	LOG_TRACE("Coucou Log");
-	SerialUSB.println("Coucou");
-	SerialUSB.println("Coucou 3");
-	readBME280();
-	delay(100);
 }
 
 void _setupExpander() {
@@ -149,4 +187,33 @@ void readBME280() {
 	LOG_INFO("temperature: %f °C", temp_bme);
 	LOG_INFO("pressure: %f Pa", press_bme);
 	LOG_INFO("humidity: %f %", hum_bme);
+}
+
+void displayInfo()
+{
+    if (gps.location.isValid())
+    {
+        LOG_INFO("Location %f,%f", gps.location.lat(), gps.location.lng());
+    }
+    else
+    {
+        LOG_WARN("Location INVALID");
+    }
+
+    if (gps.date.isValid())
+    {
+        LOG_INFO("Date (MM/DD/YYYY): %d/%d/%d", gps.date.month(), gps.date.day(), gps.date.year());
+    }
+    else LOG_WARN("Date from GPS INVALID");
+
+    if (gps.time.isValid())
+    {
+        char time[8];
+        sprintf(time, "%02d:%02d:%02d", gps.time.hour(), gps.time.minute(), gps.time.second());
+        LOG_INFO("Time: %s", time);
+        //Serial.print(F("."));
+        //if (gps.time.centisecond() < 10) Serial.print(F("0"));
+        //Serial.print(gps.time.centisecond());
+    }
+    else LOG_WARN("Time INVALID");
 }
