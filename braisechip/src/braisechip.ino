@@ -37,10 +37,10 @@
 #include <TinyGPS++.h>
 
 // Serial for GPS
-#define PIN_SERIALGPS_RX       (9ul)
-#define PIN_SERIALGPS_TX       (8ul)
-#define PAD_SERIALGPS_RX       (SERCOM_RX_PAD_3)
-#define PAD_SERIALGPS_TX       (UART_TX_PAD_2)
+const unsigned long PIN_SERIALGPS_RX = 9ul;
+const unsigned long PIN_SERIALGPS_TX =  8ul;
+const SercomRXPad PAD_SERIALGPS_RX = SERCOM_RX_PAD_3;
+const SercomUartTXPad PAD_SERIALGPS_TX = UART_TX_PAD_2;
 
 char data_json[256];
 
@@ -61,6 +61,8 @@ void SERCOM0_Handler()
 {
   SerialGps.IrqHandler();
 }
+
+void _switchLed(const int delayHigh = 1000, const int delayLow = 500);
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -91,10 +93,10 @@ void loop() {
 
 	//readBME280();
 
-	SerialUSB.println("Sent ATI to GPS");
-	SerialGps.print("ATI\r\n");
-	int read = SerialGps.read();
-	LOG_TRACE("GPS read: %i", read);
+	//SerialUSB.println("Sent ATI to GPS");
+	//SerialGps.print("AT\r\n");
+	//int read = SerialGps.read();
+	//LOG_TRACE("GPS read: %i", read);
 	if (SerialGps.available() > 0)
 	{
 		LOG_TRACE("GPS available");
@@ -105,17 +107,26 @@ void loop() {
 	}
 	if (millis() > 5000 && gps.charsProcessed() < 10)
 	{
-		LOG_FATAL("FATAL: No GPS detected: check wiring.");
-		while(true);
+		LOG_FATAL(" BAZOOKA: No GPS detected: check wiring.");
+		_switchLedError();
+		//while(true);
 	}
 
 	delay(3000);
 }
 
-void _switchLed() {
+void _switchLed(const int delayHigh, const int delayLow) {
 	digitalWrite(LED_BUILTIN, HIGH); // turn the LED on (HIGH is the voltage level)
-	delay(500);
+	delay(delayHigh);
 	digitalWrite(LED_BUILTIN, LOW); // turn the LED off by making the voltage LOW
+	delay(delayLow);
+}
+
+void _switchLedError() {
+	const int shortDelay = 100;
+	for (int i=0; i<4; i++) {
+		_switchLed(100, 100);
+	}
 }
 
 void _setupBME280() {
@@ -136,6 +147,8 @@ void _setupBME280() {
 }
 
 void _setupExpander() {
+	const int STABILITY_TIME = 10;
+
 	// Enable GPS en BME280 using expander, switches, en reset
 	Adafruit_MCP23017 mcp;
 	LOG_TRACE("Set up Expander MCP23017");
@@ -147,8 +160,10 @@ void _setupExpander() {
 	mcp.digitalWrite(GPS_PIN_ID, HIGH);
 
 	const int GPS_NRESET_PIN_ID = 15;
-	LOG_TRACE("Prevent GPS reset (GPB7)");
+	LOG_TRACE("Reset GPS (GPB7)");
 	mcp.pinMode(GPS_NRESET_PIN_ID, OUTPUT);
+	mcp.digitalWrite(GPS_NRESET_PIN_ID, LOW);
+	delay(STABILITY_TIME);
 	mcp.digitalWrite(GPS_NRESET_PIN_ID, HIGH);
 
 	const int BME280_PIN_ID = 10;
@@ -157,11 +172,9 @@ void _setupExpander() {
 	mcp.digitalWrite(BME280_PIN_ID, HIGH);
 
 	//LOG_TRACE("Use writeGPIOAB()");
-	//mcp.writeGPIOAB(0xFFFF);
+	mcp.writeGPIOAB(0xFFFF);
 
-	const int POWER_VOLTAGE_STABILITY_TIME = 10;
-	delay(POWER_VOLTAGE_STABILITY_TIME);
-
+	delay(STABILITY_TIME);
 }
 
 void readBME280() {
