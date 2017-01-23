@@ -24,9 +24,11 @@
 #include <stdint.h>
 
 // Arduino SDK libraries
-// #include <SoftwareSerial.h>
+// required before wiring_private.h
+#include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>
+#include <wiring_private.h>
 
 // Third-party libraries
 #include <Adafruit_MCP23017.h>
@@ -37,10 +39,10 @@
 #include <TinyGPS++.h>
 
 // Serial for GPS
-const unsigned long PIN_SERIALGPS_RX = 9ul;
-const unsigned long PIN_SERIALGPS_TX =  8ul;
-const SercomRXPad PAD_SERIALGPS_RX = SERCOM_RX_PAD_3;
-const SercomUartTXPad PAD_SERIALGPS_TX = UART_TX_PAD_2;
+const unsigned long PIN_GPS_RX = 9;
+const unsigned long PIN_GPS_TX = 8;
+const SercomRXPad PAD_GPS_RX = SERCOM_RX_PAD_3;
+const SercomUartTXPad PAD_GPS_TX = UART_TX_PAD_2;
 
 char data_json[256];
 
@@ -53,9 +55,9 @@ BME280 sensor_BME280;
 TinyGPSPlus gps;
 
 // See https://learn.adafruit.com/using-atsamd21-sercom-to-add-more-spi-i2c-serial-ports/creating-a-new-serial
-// Is conflicted with Serial1: see /home/lora/.platformio/packages/framework-arduinosam/variants/arduino_zero/variant.cpp
-// l. 213
-Uart SerialGps (&sercom0, PIN_SERIALGPS_RX, PIN_SERIALGPS_TX, PAD_SERIALGPS_RX, PAD_SERIALGPS_TX);
+// Comment Serial1, because of conflict on SERCOM0_Handler() callback:
+// see line 213 in /home/lora/.platformio/packages/framework-arduinosam/variants/arduino_zero/variant.cpp
+Uart SerialGps(&sercom0, PIN_GPS_RX, PIN_GPS_TX, PAD_GPS_RX, PAD_GPS_TX);
 
 void SERCOM0_Handler()
 {
@@ -66,7 +68,7 @@ void _switchLed(const int delayHigh = 1000, const int delayLow = 500);
 
 // the setup function runs once when you press reset or power the board
 void setup() {
-	const int GPS_BAUDRATE = 9600;
+
 	const int SERIAL_BAUDRATE = 9600;
 
 	// initialize digital pin LED_BUILTIN as an output.
@@ -79,11 +81,14 @@ void setup() {
 	_setupExpander();
 	//_setupBME280();
 
-	SerialGps.begin(GPS_BAUDRATE);
+	_setupGPS();
 
-	//setupSX1272();
+	_setupSX1272();
 
 	LOG_TRACE("Finish setup()");
+
+	jsonEncode();
+	loraSend();
 }
 
 // the loop function runs over and over again forever
@@ -102,14 +107,13 @@ void loop() {
 		LOG_TRACE("GPS available");
 		if (gps.encode(SerialGps.read()))
 		{
-			displayInfo();
+			logGpsInfo();
 		}
 	}
 	if (millis() > 5000 && gps.charsProcessed() < 10)
 	{
 		LOG_FATAL(" BAZOOKA: No GPS detected: check wiring.");
 		_switchLedError();
-		//while(true);
 	}
 
 	delay(3000);
@@ -123,14 +127,16 @@ void _switchLed(const int delayHigh, const int delayLow) {
 }
 
 void _switchLedError() {
-	const int shortDelay = 100;
+	const int BLINK_DELAY = 100;
 	for (int i=0; i<4; i++) {
-		_switchLed(100, 100);
+		_switchLed(BLINK_DELAY, BLINK_DELAY);
 	}
 }
 
 void _setupBME280() {
-	// Configure BME280
+
+	LOG_INFO("Set up Expander BME280");
+
 	sensor_BME280.settings.commInterface = I2C_MODE;
 	sensor_BME280.settings.I2CAddress = 0x76;
 	sensor_BME280.settings.runMode = 1;
@@ -146,63 +152,128 @@ void _setupBME280() {
 	LOG_TRACE("BME.begin() returned: %x", hex_result);
 }
 
+void _setupGPS() {
+
+	LOG_INFO("Set up GPS");
+
+	const int GPS_BAUDRATE = 9600;
+	SerialGps.begin(GPS_BAUDRATE);
+
+    pinPeripheral(PIN_GPS_RX, PIO_SERCOM_ALT);
+    pinPeripheral(PIN_GPS_TX, PIO_SERCOM_ALT);
+
+}
+
+void _setupSX1272() {
+    int e;
+    LOG_INFO("Set up SX1272");
+
+    e = sx1272.ON();
+    LOG_TRACE("Set power ON: state %d", e);
+
+    e |= sx1272.setMode(4);
+    LOG_TRACE("Set Mode: state %d", e);
+
+    e |= sx1272.setHeaderON();
+    LOG_TRACE("Set Header ON: state %d", e);
+
+    e |= sx1272.setChannel(CH_10_868);
+    LOG_TRACE("Set Channel: state %d", e);
+
+    e |= sx1272.setCRC_ON();
+    LOG_TRACE("Set CRC ON: state %d", e);
+
+    e |= sx1272.setPower('H');
+    LOG_TRACE("Setting Power: state %d", e);
+
+    e |= sx1272.setNodeAddress(3);
+    LOG_TRACE("Set node address: state %d", e);
+
+    if (e == 0) {
+        LOG_INFO("SX1272 successfully configured");
+    } else {
+        LOG_ERROR("SX1272 initialization failed");
+    }
+}
+
 void _setupExpander() {
+
+	// Expander pin number
+	enum {
+		MCP23017_GPA0,
+		MCP23017_GPA1,
+		MCP23017_GPA2,
+		MCP23017_GPA3,
+		MCP23017_GPA4,
+		MCP23017_GPA5,
+		MCP23017_GPA6,
+		MCP23017_GPA7,
+		MCP23017_GPB0,
+		MCP23017_GPB1,
+		MCP23017_GPB2,
+		MCP23017_GPB3,
+		MCP23017_GPB4,
+		MCP23017_GPB5,
+		MCP23017_GPB6,
+		MCP23017_GPB7,
+	};
+
 	const int STABILITY_TIME = 10;
 
-	// Enable GPS en BME280 using expander, switches, en reset
-	Adafruit_MCP23017 mcp;
-	LOG_TRACE("Set up Expander MCP23017");
-	mcp.begin(1);
+	// Switch on GPS and BME280 using expander, switches
+	// and reset
+	Adafruit_MCP23017 mcp23017;
+	LOG_INFO("Set up Expander MCP23017");
+	mcp23017.begin(1);
 
-	const int GPS_PIN_ID = 9;
 	LOG_TRACE("Switch on GPS (GPB1)");
-	mcp.pinMode(GPS_PIN_ID, OUTPUT);
-	mcp.digitalWrite(GPS_PIN_ID, HIGH);
+	mcp23017.pinMode(MCP23017_GPB1, OUTPUT);
+	mcp23017.digitalWrite(MCP23017_GPB1, HIGH);
 
-	const int GPS_NRESET_PIN_ID = 15;
 	LOG_TRACE("Reset GPS (GPB7)");
-	mcp.pinMode(GPS_NRESET_PIN_ID, OUTPUT);
-	mcp.digitalWrite(GPS_NRESET_PIN_ID, LOW);
-	delay(STABILITY_TIME);
-	mcp.digitalWrite(GPS_NRESET_PIN_ID, HIGH);
+	mcp23017.pinMode(MCP23017_GPB7, OUTPUT);
+	mcp23017.digitalWrite(MCP23017_GPB7, LOW);
+	mcp23017.digitalWrite(MCP23017_GPB7, HIGH);
 
-	const int BME280_PIN_ID = 10;
 	LOG_TRACE("Switch on BME280 (GPB2)");
-	mcp.pinMode(BME280_PIN_ID, OUTPUT);
-	mcp.digitalWrite(BME280_PIN_ID, HIGH);
+	mcp23017.pinMode(MCP23017_GPB2, OUTPUT);
+	mcp23017.digitalWrite(MCP23017_GPB2, HIGH);
 
 	//LOG_TRACE("Use writeGPIOAB()");
-	mcp.writeGPIOAB(0xFFFF);
+	// mcp.writeGPIOAB(0xFFFF);
 
 	delay(STABILITY_TIME);
 }
 
 void readBME280() {
+	// TODO: check stability time and register management
+
+	const int STABILITY_TIME = 10;
 	uint8_t valeur_reg_ctrl_meas;
 
 	// record register ctrl_meas
 	valeur_reg_ctrl_meas = sensor_BME280.readRegister(BME280_CTRL_MEAS_REG);
-	delay(5);
+	delay(STABILITY_TIME);
 
 	// apply mask to swith from sleep-mode to forced_mode
 	valeur_reg_ctrl_meas = valeur_reg_ctrl_meas | 0x01;
-	delay(5);
+	delay(STABILITY_TIME);
 
 	// write new value to register ctrl_meas
 	sensor_BME280.writeRegister(BME280_CTRL_MEAS_REG, valeur_reg_ctrl_meas);
-	delay(5);
+	delay(STABILITY_TIME);
 
 	temp_bme = sensor_BME280.readTempC();
-	delay(10);
+	delay(STABILITY_TIME);
 	press_bme = sensor_BME280.readFloatPressure();
-	delay(10);
+	delay(STABILITY_TIME);
 	hum_bme = sensor_BME280.readFloatHumidity();
 	LOG_INFO("temperature: %f °C", temp_bme);
 	LOG_INFO("pressure: %f Pa", press_bme);
 	LOG_INFO("humidity: %f %", hum_bme);
 }
 
-void displayInfo()
+void logGpsInfo()
 {
     if (gps.location.isValid())
     {
@@ -229,4 +300,41 @@ void displayInfo()
         //Serial.print(gps.time.centisecond());
     }
     else LOG_WARN("Time INVALID");
+}
+
+void jsonEncode()
+{
+    LOG_DEBUG("Start encodage_json()");
+    StaticJsonBuffer<256> jsonBuffer;
+
+    //constructon des objets
+    JsonObject& data = jsonBuffer.createObject();
+
+    JsonArray& bmedata = data.createNestedArray("bme");
+    bmedata.add(temp_bme, 2);  // 6 is the number of decimals to print
+    bmedata.add(press_bme);
+    bmedata.add(hum_bme);
+
+    JsonArray& latlon = data.createNestedArray("position");
+    latlon.add(gps.location.lat(), 6);  // 6 is the number of decimals to print
+    latlon.add(gps.location.lng(), 6);
+
+    data["annee"] = gps.date.year();//annee_gps;
+    data["mois"] = gps.date.month();//mois_gps;
+    data["jour"] = gps.date.day();//jour_gps;
+    data["heure"] = gps.time.hour();//heure_gps;
+    data["minute"] = gps.time.minute();//minute_gps;
+    data["seconde"] = gps.time.second();//seconde_gps;
+
+    //char data_json[256];
+    data.printTo(data_json, sizeof(data_json));
+    //Serial.println(data_json);
+}
+
+void loraSend()
+{
+    LOG_INFO("Start loraSend()");
+    int e = sx1272.sendPacketTimeout(0, data_json);
+
+    LOG_INFO("Packet sent, state: %d", e);
 }
