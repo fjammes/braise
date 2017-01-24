@@ -25,7 +25,6 @@ float temp_bme, press_bme, hum_bme;
 float longitude_gps, latitude_gps;
 int annee_gps, mois_gps, jour_gps, heure_gps, minute_gps, seconde_gps;
 
-
 BME280 sensor_BME280;
 
 TinyGPSPlus gps;
@@ -102,9 +101,9 @@ void loop()
         if (gps.encode(serialGPS.read()))
         {
             mesureBME280();
-            displayInfo();
-            encodage_json();
-            transmission_json();
+            logGpsData();
+            json_encode();
+            loraSend();
             delay(3000);
         }
     }
@@ -137,7 +136,7 @@ void mesureBME280()
     LOG_INFO("humidity: %f %", hum_bme);
 }
 
-void displayInfo()
+void logGpsData()
 {
     if (gps.location.isValid())
     {
@@ -166,7 +165,7 @@ void displayInfo()
     else LOG_WARN("Time INVALID");
 }
 
-void encodage_json()
+void json_encode()
 {
     LOG_DEBUG("Start encodage_json()");
     StaticJsonBuffer<256> jsonBuffer;
@@ -195,7 +194,7 @@ void encodage_json()
     //Serial.println(data_json);
 }
 
-void transmission_json()
+void loraSend()
 {
     LOG_DEBUG("Start transmission_json()");
     int e = sx1272.sendPacketTimeout(0, data_json);

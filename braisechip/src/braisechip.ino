@@ -44,15 +44,10 @@ const unsigned long PIN_GPS_TX = 8;
 const SercomRXPad PAD_GPS_RX = SERCOM_RX_PAD_3;
 const SercomUartTXPad PAD_GPS_TX = UART_TX_PAD_2;
 
-char data_json[256];
-
-float temp_bme, press_bme, hum_bme;
+// GPS data
+TinyGPSPlus gps;
 float longitude_gps, latitude_gps;
 int annee_gps, mois_gps, jour_gps, heure_gps, minute_gps, seconde_gps;
-
-BME280 sensor_BME280;
-
-TinyGPSPlus gps;
 
 // See https://learn.adafruit.com/using-atsamd21-sercom-to-add-more-spi-i2c-serial-ports/creating-a-new-serial
 // Comment Serial1, because of conflict on SERCOM0_Handler() callback:
@@ -63,6 +58,12 @@ void SERCOM0_Handler()
 {
   SerialGps.IrqHandler();
 }
+
+// BME data
+BME280 sensor_BME280;
+float temp_bme, press_bme, hum_bme;
+
+char data_json[256];
 
 void _switchLed(const int delayHigh = 1000, const int delayLow = 500);
 
@@ -102,16 +103,15 @@ void loop() {
 	//SerialGps.print("AT\r\n");
 	//int read = SerialGps.read();
 	//LOG_TRACE("GPS read: %i", read);
-	if (SerialGps.available() > 0)
-	{
+	if (SerialGps.available() > 0) {
 		LOG_TRACE("GPS available");
-		if (gps.encode(SerialGps.read()))
-		{
-			logGpsInfo();
+		char read = SerialGps.read();
+		LOG_TRACE("GPS read: %c", read);
+		if (gps.encode(read)) {
+			logGpsData();
 		}
 	}
-	if (millis() > 5000 && gps.charsProcessed() < 10)
-	{
+	if (millis() > 5000 && gps.charsProcessed() < 10) {
 		LOG_FATAL(" BAZOOKA: No GPS detected: check wiring.");
 		_switchLedError();
 	}
@@ -239,6 +239,16 @@ void _setupExpander() {
 	mcp23017.pinMode(MCP23017_GPB2, OUTPUT);
 	mcp23017.digitalWrite(MCP23017_GPB2, HIGH);
 
+	// TODO Move to SX1272 lib (ON() function)
+	LOG_TRACE("Switch on SX1272 CS (!GPA6)");
+	mcp23017.pinMode(MCP23017_GPA6, OUTPUT);
+	mcp23017.digitalWrite(MCP23017_GPA6, LOW);
+
+	LOG_TRACE("Reset SX1272 (!GPA7)");
+	mcp23017.pinMode(MCP23017_GPB7, OUTPUT);
+	mcp23017.digitalWrite(MCP23017_GPA7, HIGH);
+	mcp23017.digitalWrite(MCP23017_GPA7, LOW);
+
 	//LOG_TRACE("Use writeGPIOAB()");
 	// mcp.writeGPIOAB(0xFFFF);
 
@@ -273,7 +283,7 @@ void readBME280() {
 	LOG_INFO("humidity: %f %", hum_bme);
 }
 
-void logGpsInfo()
+void logGpsData()
 {
     if (gps.location.isValid())
     {
