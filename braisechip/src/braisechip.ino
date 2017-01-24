@@ -103,14 +103,15 @@ void loop() {
 	//SerialGps.print("AT\r\n");
 	//int read = SerialGps.read();
 	//LOG_TRACE("GPS read: %i", read);
-	if (SerialGps.available() > 0) {
-		LOG_TRACE("GPS available");
+	while (SerialGps.available() > 0) {
 		char read = SerialGps.read();
-		LOG_TRACE("GPS read: %c", read);
-		if (gps.encode(read)) {
-			logGpsData();
-		}
+		// TODO check log level
+		SerialUSB.write(read);
+		gps.encode(read);
 	}
+	// TODO check log level
+	SerialUSB.println();
+	logGpsData();
 	if (millis() > 5000 && gps.charsProcessed() < 10) {
 		LOG_FATAL(" BAZOOKA: No GPS detected: check wiring.");
 		_switchLedError();
