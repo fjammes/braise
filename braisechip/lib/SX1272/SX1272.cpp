@@ -26,8 +26,16 @@
 // Includes
 //**********************************************************************/
 
-#include "SX1272.h"
+// Standards libraries
+#include <stdint.h>
+
+// Arduino SDK libraries
 #include <SPI.h>
+
+// Third-party libraries
+#include <Adafruit_MCP23017.h>
+#include <Log.h>
+#include "SX1272.h"
 
 #define Serial SerialUSB
 
@@ -73,6 +81,40 @@
 uint8_t sx1272_SIFS_value[11]={0, 183, 94, 44, 47, 23, 24, 12, 12, 7, 4};
 uint8_t sx1272_CAD_value[11]={0, 62, 31, 16, 16, 8, 9, 5, 3, 1, 1};
 // end
+
+void _set_SX1272_SS(uint8_t d) {
+/* Use MCP23017 to set up SX1272 Chip Select
+ * param: LOW is on, HIGH is OFF
+ */
+	// Expander pin number
+	const int MCP23017_GPA6 = 6;
+	Adafruit_MCP23017 mcp23017;
+	mcp23017.begin(1);
+	if (d == LOW) {
+		Serial.println(F("Switch ON SX1272_SS (GPA6)"));
+	}
+	else {
+		Serial.println(F("Switch OFF SX1272_SS"));
+	}
+
+	mcp23017.pinMode(MCP23017_GPA6, OUTPUT);
+	mcp23017.digitalWrite(MCP23017_GPA6, d);
+}
+
+void _reset_SX1272() {
+/* Use MCP23017 to reset SX1272
+ */
+	// Expander pin number
+	const int MCP23017_GPA7 = 7;
+	Adafruit_MCP23017 mcp23017;
+	mcp23017.begin(1);
+	Serial.println(F("Reset SX1272_SS (GPA7)"));
+	mcp23017.pinMode(MCP23017_GPA7, OUTPUT);
+	mcp23017.digitalWrite(MCP23017_GPA7, HIGH);
+	delay(100);
+	mcp23017.digitalWrite(MCP23017_GPA7, LOW);
+	delay(100);
+}
 
 //**********************************************************************/
 // Public functions.
@@ -160,9 +202,11 @@ uint8_t SX1272::ON()
     Serial.println(F("Starting 'ON'"));
 #endif
 
+    // Disabled, on braisechip SX1272 CS is GPA6 on expander 1
     // Powering the module
-    pinMode(SX1272_SS,OUTPUT);
-    digitalWrite(SX1272_SS,HIGH);
+    //pinMode(SX1272_SS,OUTPUT);
+    //digitalWrite(SX1272_SS,HIGH);
+    _set_SX1272_SS(HIGH);
     delay(100);
 
     //#define USE_SPI_SETTINGS
@@ -187,12 +231,14 @@ uint8_t SX1272::ON()
 
     delay(100);
 
+    // Disabled, on braisechip SX1272 CS is GPA6 on expander 1
     // added by C. Pham
-    pinMode(SX1272_RST,OUTPUT);
-    digitalWrite(SX1272_RST,HIGH);
-    delay(100);
-    digitalWrite(SX1272_RST,LOW);
-    delay(100);
+    //pinMode(SX1272_RST,OUTPUT);
+    //digitalWrite(SX1272_RST,HIGH);
+    //delay(100);
+    //digitalWrite(SX1272_RST,LOW);
+    //delay(100);
+    _reset_SX1272();
 
     // from single_chan_pkt_fwd by Thomas Telkamp
     uint8_t version = readRegister(REG_VERSION);
@@ -387,8 +433,9 @@ void SX1272::OFF()
 
     SPI.end();
     // Powering the module
-    pinMode(SX1272_SS,OUTPUT);
-    digitalWrite(SX1272_SS,LOW);
+    //pinMode(SX1272_SS,OUTPUT);
+    //digitalWrite(SX1272_SS,LOW);
+    _set_SX1272_SS(LOW);
 #if (SX1272_debug_mode > 1)
     Serial.println(F("## Setting OFF ##"));
     Serial.println();
@@ -405,11 +452,12 @@ byte SX1272::readRegister(byte address)
 {
     byte value = 0x00;
 
-    digitalWrite(SX1272_SS,LOW);
+    //digitalWrite(SX1272_SS,LOW);
+    _set_SX1272_SS(LOW);
     bitClear(address, 7);		// Bit 7 cleared to write in registers
     SPI.transfer(address);
     value = SPI.transfer(0x00);
-    digitalWrite(SX1272_SS,HIGH);
+    //digitalWrite(SX1272_SS,HIGH);
 
 #if (SX1272_debug_mode > 1)
     Serial.print(F("## Reading:  ##\t"));
@@ -419,6 +467,8 @@ byte SX1272::readRegister(byte address)
     Serial.print(value, HEX);
     Serial.println();
 #endif
+
+    _set_SX1272_SS(HIGH);
 
     return value;
 }
@@ -432,11 +482,12 @@ byte SX1272::readRegister(byte address)
 */
 void SX1272::writeRegister(byte address, byte data)
 {
-    digitalWrite(SX1272_SS,LOW);
+    //digitalWrite(SX1272_SS,LOW);
+    _set_SX1272_SS(LOW);
     bitSet(address, 7);			// Bit 7 set to read from registers
     SPI.transfer(address);
     SPI.transfer(data);
-    digitalWrite(SX1272_SS,HIGH);
+    //digitalWrite(SX1272_SS,HIGH);
 
 #if (SX1272_debug_mode > 1)
     Serial.print(F("## Writing:  ##\t"));
@@ -447,6 +498,8 @@ void SX1272::writeRegister(byte address, byte data)
     Serial.print(data, HEX);
     Serial.println();
 #endif
+
+    _set_SX1272_SS(HIGH);
 
 }
 
@@ -509,7 +562,7 @@ uint8_t SX1272::setLORA()
         writeRegister(REG_OP_MODE, LORA_STANDBY_MODE);
         delay(50+retry*10);
         st0 = readRegister(REG_OP_MODE);
-        Serial.println(F("..."));
+        Serial.println(F("Waiting for LORA standby mode..."));
 
         if ((retry % 2)==0)
             if (retry==20)

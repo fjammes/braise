@@ -239,16 +239,6 @@ void _setupExpander() {
 	mcp23017.pinMode(MCP23017_GPB2, OUTPUT);
 	mcp23017.digitalWrite(MCP23017_GPB2, HIGH);
 
-	// TODO Move to SX1272 lib (ON() function)
-	LOG_TRACE("Switch on SX1272 CS (!GPA6)");
-	mcp23017.pinMode(MCP23017_GPA6, OUTPUT);
-	mcp23017.digitalWrite(MCP23017_GPA6, LOW);
-
-	LOG_TRACE("Reset SX1272 (!GPA7)");
-	mcp23017.pinMode(MCP23017_GPB7, OUTPUT);
-	mcp23017.digitalWrite(MCP23017_GPA7, HIGH);
-	mcp23017.digitalWrite(MCP23017_GPA7, LOW);
-
 	//LOG_TRACE("Use writeGPIOAB()");
 	// mcp.writeGPIOAB(0xFFFF);
 
