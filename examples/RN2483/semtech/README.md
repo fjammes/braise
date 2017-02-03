@@ -1,3 +1,9 @@
+# Serial monitor
+
+picocom -b 57600 --omap crcrlf --echo /dev/ttyACM0
+
+# OTAA
+
 lora@clrinfopc04:~/src/braise/examples/RN2483$ ./connect.sh /dev/ttyACM0 57600
 
 Then stty -F /dev/ttyACM0 57600 -cstopb -parity
@@ -16,3 +22,14 @@ ok^M
 mac join otaa
 ok^M
 
+
+# APB
+
+sys factoryRESET
+mac set deveui FA9C43C0DE000005
+mac set devaddr 000000FF
+mac set appskey 11111111111111111111111111111111
+mac set nwkskey 11111111111111111111111111111111
+mac set adr on
+mac save
+mac join abp
