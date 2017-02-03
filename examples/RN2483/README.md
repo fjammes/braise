@@ -6,44 +6,9 @@ https://staging.thethingsnetwork.org/applications/70B3D57ED00015FC/devices/0004A
 
 http://www.microchip.com/forums/m945840.aspx
 
-# Serial communication
+# ABP and OTAA configuration
 
-lora@clrinfopc04:~/src/braise/examples/RN2483$ ./connect.sh /dev/ttyACM0 57600
-
-Then stty -F /dev/ttyACM0 57600 -cstopb -parity
-sys get ver
-RN2483 1.0.1 Dec 15 2015 09:38:09^M
-sys get hweui
-0004A30B001B9BA7^M
-mac set appeui 70B3D57ED00015FC
-ok^M
-mac save
-ok^M
-mac set appkey 068525136DFC00BDC5488CC1397E912B
-ok^M
-mac save
-ok^M
-mac get appeui
-70B3D57ED00015FC^M
-mac get deveui
-0000000000000000^M
-sys get hweui
-0004A30B001B9BA7^M
-mac set deveui 0004A30B001B9BA7
-ok^M
-mac save
-ok^M
-mac get deveui
-0004A30B001B9BA7^M
-mac get appeui
-70B3D57ED00015FC^M
-mac get appkey
-invalid_param^M
-mac set appkey 068525136DFC00BDC5488CC1397E912B
-ok^M
-mac save
-ok^M
-^C
+Check README file in `semtech/`.
 
 # Change channel availability
 
