@@ -34,11 +34,6 @@ ok^M
 mac save
 ok^M
 mac get deveui
-^C
-lora@clrinfopc04:~/src/braise/examples/RN2483$ ./connect.sh /dev/ttyACM0 57600
-
-Then stty -F /dev/ttyACM0 57600 -cstopb -parity
-mac get deveui
 0004A30B001B9BA7^M
 mac get appeui
 70B3D57ED00015FC^M
