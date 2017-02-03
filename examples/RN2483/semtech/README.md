@@ -26,6 +26,7 @@ ok^M
 # APB
 
 sys factoryRESET
+# Optional for ABP, but seems to be required by Semtech Netwrok Server
 mac set deveui FA9C43C0DE000005
 mac set devaddr 000000FF
 mac set appskey 11111111111111111111111111111111
