@@ -138,7 +138,8 @@ void do_send(osjob_t* j){
 }
 
 void setup() {
-    SerialUSB.begin(115200);
+    int baud_rate = 9600;
+    SerialUSB.begin(baud_rate);
     SerialUSB.println(F("Starting"));
 
     #ifdef VCC_ENABLE
